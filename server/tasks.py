@@ -6,6 +6,7 @@ import logging
 from models import TaskStatus
 from database import DatabaseOperations
 from utils import run_ai_code_task_v2  # Updated function name
+from utils.claude_flow_executor import run_claude_flow_task  # Claude-flow integration
 from github import Github
 
 logger = logging.getLogger(__name__)
@@ -36,8 +37,8 @@ def start_task():
             return jsonify({'error': 'prompt, repo_url, and github_token are required'}), 400
         
         # Validate model selection
-        if model not in ['claude', 'codex']:
-            return jsonify({'error': 'model must be either "claude" or "codex"'}), 400
+        if model not in ['claude', 'codex', 'claude-flow']:
+            return jsonify({'error': 'model must be either "claude", "codex", or "claude-flow"'}), 400
         
         # Create initial chat message
         chat_messages = [{
@@ -60,14 +61,22 @@ def start_task():
             return jsonify({'error': 'Failed to create task'}), 500
         
         # Start task in background thread
-        thread = threading.Thread(target=run_ai_code_task_v2, args=(task['id'], user_id, github_token))
+        # Use claude-flow executor if model is 'claude-flow', otherwise use traditional Docker approach
+        if model == 'claude-flow':
+            logger.info(f"🐝 Using claude-flow orchestration for task {task['id']}")
+            thread = threading.Thread(target=run_claude_flow_task, args=(task['id'], user_id, github_token))
+        else:
+            logger.info(f"🐳 Using Docker execution for task {task['id']} with model {model}")
+            thread = threading.Thread(target=run_ai_code_task_v2, args=(task['id'], user_id, github_token))
+
         thread.daemon = True
         thread.start()
-        
+
         return jsonify({
             'status': 'success',
             'task_id': task['id'],
-            'message': 'Task started successfully'
+            'message': f'Task started successfully using {model}',
+            'orchestrator': 'claude-flow' if model == 'claude-flow' else 'docker'
         })
         
     except Exception as e:

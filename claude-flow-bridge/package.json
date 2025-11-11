@@ -1,0 +1,34 @@
+{
+  "name": "claude-flow-bridge",
+  "version": "1.0.0",
+  "description": "Node.js bridge service for claude-flow integration with async-code Python backend",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node src/test.js"
+  },
+  "keywords": [
+    "claude-flow",
+    "bridge",
+    "orchestration",
+    "ai"
+  ],
+  "author": "Async Code Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "pino": "^8.16.1",
+    "pino-pretty": "^10.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

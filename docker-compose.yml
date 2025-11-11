@@ -24,6 +24,7 @@ services:
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=True
+      - CLAUDE_FLOW_BRIDGE_URL=http://claude-flow-bridge:5001
     env_file:
       - ./server/.env
     volumes:
@@ -31,6 +32,23 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - claude-automation-build
+      - claude-flow-bridge
+
+  claude-flow-bridge:
+    build:
+      context: ./claude-flow-bridge
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - BRIDGE_PORT=5001
+      - LOG_LEVEL=info
+    env_file:
+      - ./claude-flow-bridge/.env
+    volumes:
+      - ./claude-flow-bridge:/app
+      - /app/node_modules
+      - claude_flow_data:/root/.claude-flow
 
   claude-automation-build:
     build:
@@ -42,3 +60,4 @@ services:
 
 volumes:
   docker_socket:
+  claude_flow_data:
