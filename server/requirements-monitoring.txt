@@ -1,0 +1,2 @@
+# Monitoring dependencies
+sentry-sdk[flask]==1.39.1

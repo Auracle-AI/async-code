@@ -24,6 +24,10 @@ services:
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=True
+      - CLAUDE_FLOW_BRIDGE_URL=http://claude-flow-bridge:5001
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     env_file:
       - ./server/.env
     volumes:
@@ -31,6 +35,72 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - claude-automation-build
+      - claude-flow-bridge
+      - redis
+
+  claude-flow-bridge:
+    build:
+      context: ./claude-flow-bridge
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - BRIDGE_PORT=5001
+      - LOG_LEVEL=info
+    env_file:
+      - ./claude-flow-bridge/.env
+    volumes:
+      - ./claude-flow-bridge:/app
+      - /app/node_modules
+      - claude_flow_data:/root/.claude-flow
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  celery-worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    command: celery -A queue.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+      - backend
+
+  celery-beat:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    command: celery -A queue.celery_app beat --loglevel=info
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/app
+    depends_on:
+      - redis
+      - backend
 
   claude-automation-build:
     build:
@@ -42,3 +112,5 @@ services:
 
 volumes:
   docker_socket:
+  claude_flow_data:
+  redis_data:
